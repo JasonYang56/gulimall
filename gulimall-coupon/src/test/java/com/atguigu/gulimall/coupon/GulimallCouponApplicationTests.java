@@ -10,4 +10,10 @@ class GulimallCouponApplicationTests {
 	void contextLoads() {
 	}
 
+	@Test
+	void testCpuCount(){
+		//to test how many cpus are there in my laptop
+		System.out.println("cpu count is===>"+Runtime.getRuntime().availableProcessors());
+	}
+
 }
