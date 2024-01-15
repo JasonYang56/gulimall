@@ -1,8 +1,11 @@
 package com.atguigu.gulimall.product.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+import com.sun.org.apache.xml.internal.resolver.CatalogEntry;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,11 +36,31 @@ public class CategoryController {
     /**
      * 列表
      */
-    @RequestMapping("/list")
-    public R list(@RequestParam Map<String, Object> params){
-        PageUtils page = categoryService.queryPage(params);
+    @RequestMapping("/list/tree")
+    public R list(){
+//        PageUtils page = categoryService.queryPage(params);
+        List<CategoryEntity> categoryTreeList = categoryService.getCategoryTreeList();
+        List<CategoryEntity> menuList1 = categoryTreeList.stream().filter(categoryEntity ->
+                categoryEntity.getParentCid() == 0
+        ).map((menu)->{
+            menu.setChildren(getChildren(menu,categoryTreeList));
+            return menu;
+        }).sorted((menu1,menu2)->{
+            return (menu1.getSort()==null ? 0: menu1.getSort()) - (menu2.getSort()==null?0:menu2.getSort());
+        }).collect(Collectors.toList());
 
-        return R.ok().put("page", page);
+        return R.ok().put("data", menuList1);
+    }
+
+    private List<CategoryEntity> getChildren(CategoryEntity menu,List<CategoryEntity> all){
+        List<CategoryEntity> collect = all.stream().filter(categoryEntity -> categoryEntity.getParentCid() == menu.getCatId())
+                .map((clildMenu) -> {
+                    clildMenu.setChildren(getChildren(clildMenu, all));
+                    return clildMenu;
+                }).sorted((menu1, menu2) -> {
+                    return (menu1.getSort() == null ? 0 : menu1.getSort()) - (menu2.getSort() == null ? 0 : menu2.getSort());
+                }).collect(Collectors.toList());
+        return collect;
     }
 
 
@@ -48,7 +71,7 @@ public class CategoryController {
     public R info(@PathVariable("catId") Long catId){
 		CategoryEntity category = categoryService.getById(catId);
 
-        return R.ok().put("category", category);
+        return R.ok().put("data", category);
     }
 
     /**
@@ -73,11 +96,12 @@ public class CategoryController {
 
     /**
      * 删除
+     * @RequestBody 获取请求提信息，必须使用post方式发送
      */
     @RequestMapping("/delete")
     public R delete(@RequestBody Long[] catIds){
-		categoryService.removeByIds(Arrays.asList(catIds));
-
+//		categoryService.removeByIds(Arrays.asList(catIds));
+        categoryService.removeMenusByIds(Arrays.asList(catIds));
         return R.ok();
     }
 
